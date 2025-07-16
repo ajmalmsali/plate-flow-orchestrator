@@ -52,6 +52,19 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				kitchen: {
+					pending: 'hsl(var(--kitchen-pending))',
+					cooking: 'hsl(var(--kitchen-cooking))',
+					ready: 'hsl(var(--kitchen-ready))',
+					served: 'hsl(var(--kitchen-served))',
+					urgent: 'hsl(var(--kitchen-urgent))'
+				},
+				section: {
+					grill: 'hsl(var(--section-grill))',
+					salad: 'hsl(var(--section-salad))',
+					beverage: 'hsl(var(--section-beverage))',
+					dessert: 'hsl(var(--section-dessert))'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
