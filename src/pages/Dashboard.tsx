@@ -1,13 +1,20 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChefHat, Users, BarChart3, Settings, Clock, TrendingUp } from 'lucide-react';
+import { ChefHat, Users, BarChart3, Settings, Clock, TrendingUp, LogOut, User } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { mockOrders } from '@/data/mockData';
+import { useAuth } from '@/contexts/AuthContext';
+import { mockOrders, kitchens } from '@/data/mockData';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   // Calculate dashboard stats
   const activeOrders = mockOrders.filter(order => order.status === 'active');
@@ -30,6 +37,7 @@ const Dashboard = () => {
       color: 'bg-section-grill',
       stats: `${cookingItems} cooking, ${readyItems} ready`,
       onClick: () => navigate('/kitchen'),
+      roles: ['admin', 'manager', 'kitchen'],
     },
     {
       title: 'Captain Dashboard',
@@ -38,6 +46,7 @@ const Dashboard = () => {
       color: 'bg-section-salad',
       stats: `${activeOrders.length} active orders`,
       onClick: () => navigate('/captain'),
+      roles: ['admin', 'manager', 'captain'],
     },
     {
       title: 'Analytics',
@@ -46,16 +55,22 @@ const Dashboard = () => {
       color: 'bg-section-beverage',
       stats: 'Coming soon',
       onClick: () => {},
+      roles: ['admin', 'manager'],
     },
     {
-      title: 'Settings',
-      description: 'System configuration and preferences',
+      title: 'User Management',
+      description: 'Manage users and permissions',
       icon: Settings,
       color: 'bg-section-dessert',
-      stats: 'Printer setup, sections',
+      stats: 'User roles & access',
       onClick: () => {},
+      roles: ['admin'],
     },
   ];
+
+  const accessibleCards = dashboardCards.filter(card => 
+    card.roles.includes(user?.role || '')
+  );
 
   const recentActivity = [
     { time: '2 min ago', action: 'Order #001 - Table 12 - Grilled Chicken ready' },
@@ -72,7 +87,9 @@ const Dashboard = () => {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold text-foreground">Restaurant Management System</h1>
-              <p className="text-muted-foreground">Streamline your kitchen operations and service</p>
+              <p className="text-muted-foreground">
+                Welcome back, {user?.username} • {user?.role}
+              </p>
             </div>
             <div className="flex items-center gap-4">
               <Badge variant="outline" className="text-sm">
@@ -82,6 +99,15 @@ const Dashboard = () => {
               <Badge className="bg-kitchen-ready text-white">
                 System Online
               </Badge>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleLogout}
+                className="flex items-center gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </Button>
             </div>
           </div>
         </div>
@@ -147,9 +173,40 @@ const Dashboard = () => {
           </Card>
         </div>
 
+        {/* Available Kitchens */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ChefHat className="w-5 h-5" />
+              Kitchen Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {kitchens.map((kitchen) => (
+                <div key={kitchen.id} className="bg-muted/50 p-4 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold">{kitchen.name}</h3>
+                    <Badge 
+                      variant={kitchen.isActive ? "default" : "secondary"}
+                      className={kitchen.isActive ? "bg-kitchen-ready text-white" : ""}
+                    >
+                      {kitchen.isActive ? "Active" : "Inactive"}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-2">{kitchen.location}</p>
+                  <div className="text-xs text-muted-foreground">
+                    Sections: {kitchen.sections.join(', ')}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Main Navigation Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {dashboardCards.map((card, index) => (
+          {accessibleCards.map((card, index) => (
             <Card 
               key={index} 
               className="cursor-pointer hover:shadow-lg transition-shadow duration-200 border-2 hover:border-primary"

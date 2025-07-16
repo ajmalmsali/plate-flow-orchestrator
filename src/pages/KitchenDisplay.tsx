@@ -4,12 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { OrderItem, BatchCookingSuggestion, KitchenSection } from '@/types/restaurant';
-import { mockOrders, kitchenSections, menuItems } from '@/data/mockData';
+import { OrderItem, BatchCookingSuggestion } from '@/types/restaurant';
+import { mockOrders, kitchenSections, menuItems, kitchens } from '@/data/mockData';
 import { useToast } from '@/hooks/use-toast';
 
 const KitchenDisplay = () => {
   const [selectedSection, setSelectedSection] = useState<string>('all');
+  const [selectedKitchen, setSelectedKitchen] = useState<string>('all');
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [batchSuggestions, setBatchSuggestions] = useState<BatchCookingSuggestion[]>([]);
   const { toast } = useToast();
@@ -51,6 +52,7 @@ const KitchenDisplay = () => {
           tableNumbers: [...new Set(items.map(item => item.tableNumber))],
           avgWaitTime,
           canBatch: totalQuantity <= 6, // Reasonable batch size
+          kitchenId: items[0].menuItem.kitchenId,
         });
       }
     });
@@ -58,9 +60,15 @@ const KitchenDisplay = () => {
     setBatchSuggestions(suggestions);
   };
 
-  const filteredItems = selectedSection === 'all' 
-    ? orderItems 
-    : orderItems.filter(item => item.menuItem.section === selectedSection);
+  const filteredItems = orderItems.filter(item => {
+    const matchesSection = selectedSection === 'all' || item.menuItem.section === selectedSection;
+    const matchesKitchen = selectedKitchen === 'all' || item.menuItem.kitchenId === selectedKitchen;
+    return matchesSection && matchesKitchen;
+  });
+
+  const availableSections = selectedKitchen === 'all' 
+    ? kitchenSections 
+    : kitchenSections.filter(section => section.kitchenId === selectedKitchen);
 
   const updateItemStatus = (itemId: string, newStatus: 'pending' | 'cooking' | 'ready' | 'served') => {
     setOrderItems(prev => 
@@ -131,38 +139,56 @@ const KitchenDisplay = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Kitchen Display System</h1>
-            <p className="text-muted-foreground">Real-time order management and batch cooking</p>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <Select value={selectedSection} onValueChange={setSelectedSection}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Select section" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Sections</SelectItem>
-                {kitchenSections.map(section => (
-                  <SelectItem key={section.id} value={section.id}>
-                    {section.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    <div className="min-h-screen bg-background">
+      {/* Tablet-Optimized Header */}
+      <div className="bg-card border-b sticky top-0 z-40 shadow-sm">
+        <div className="px-6 py-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">Kitchen Display System</h1>
+              <p className="text-muted-foreground">Real-time order management and batch cooking</p>
+            </div>
             
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Timer className="w-4 h-4" />
-              <span>Updated: {new Date().toLocaleTimeString()}</span>
+            <div className="flex items-center gap-3">
+              <Select value={selectedKitchen} onValueChange={setSelectedKitchen}>
+                <SelectTrigger className="w-40 md:w-48">
+                  <SelectValue placeholder="Kitchen" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Kitchens</SelectItem>
+                  {kitchens.map(kitchen => (
+                    <SelectItem key={kitchen.id} value={kitchen.id}>
+                      {kitchen.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select value={selectedSection} onValueChange={setSelectedSection}>
+                <SelectTrigger className="w-40 md:w-48">
+                  <SelectValue placeholder="Section" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sections</SelectItem>
+                  {availableSections.map(section => (
+                    <SelectItem key={section.id} value={section.id}>
+                      {section.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Timer className="w-4 h-4" />
+                <span className="hidden sm:inline">Updated: {new Date().toLocaleTimeString()}</span>
+              </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Batch Cooking Suggestions */}
+      <div className="p-4 md:p-6 max-w-full overflow-x-hidden">
+        {/* Tablet-Optimized Batch Cooking Suggestions */}
         {batchSuggestions.length > 0 && (
           <Card className="mb-6 border-kitchen-pending bg-kitchen-pending/10">
             <CardHeader>
@@ -172,28 +198,28 @@ const KitchenDisplay = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {batchSuggestions.map((suggestion, index) => (
-                  <div key={index} className="bg-card p-4 rounded-lg border">
+                  <div key={index} className="bg-card p-4 rounded-lg border shadow-sm">
                     <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h3 className="font-semibold">{suggestion.menuItem.name}</h3>
-                        <p className="text-sm text-muted-foreground">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-sm md:text-base">{suggestion.menuItem.name}</h3>
+                        <p className="text-xs md:text-sm text-muted-foreground">
                           {suggestion.totalQuantity} items from {suggestion.tableNumbers.length} tables
                         </p>
                       </div>
-                      <Badge variant="outline" className="bg-kitchen-pending text-white">
-                        {suggestion.avgWaitTime.toFixed(0)}m wait
+                      <Badge variant="outline" className="bg-kitchen-pending text-white text-xs">
+                        {suggestion.avgWaitTime.toFixed(0)}m
                       </Badge>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-xs md:text-sm text-muted-foreground">
                         Tables: {suggestion.tableNumbers.join(', ')}
                       </span>
                       <Button 
                         size="sm" 
                         onClick={() => startBatchCooking(suggestion)}
-                        className="bg-kitchen-cooking hover:bg-kitchen-cooking/80"
+                        className="bg-kitchen-cooking hover:bg-kitchen-cooking/80 text-xs md:text-sm"
                       >
                         Start Batch
                       </Button>
@@ -205,8 +231,8 @@ const KitchenDisplay = () => {
           </Card>
         )}
 
-        {/* Order Items Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {/* Tablet-Optimized Order Items Grid */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {filteredItems
             .sort((a, b) => {
               // Sort by priority (higher first), then by order time
@@ -220,57 +246,63 @@ const KitchenDisplay = () => {
               return (
                 <Card 
                   key={item.id} 
-                  className={`${getPriorityColor(item.priority, timeSinceOrder)} ${isUrgent ? 'animate-pulse' : ''}`}
+                  className={`${getPriorityColor(item.priority, timeSinceOrder)} ${isUrgent ? 'animate-pulse' : ''} touch-manipulation`}
                 >
-                  <CardHeader className="pb-3">
+                  <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-lg">{item.menuItem.name}</CardTitle>
-                        <p className="text-sm text-muted-foreground">
+                      <div className="flex-1">
+                        <CardTitle className="text-base md:text-lg">{item.menuItem.name}</CardTitle>
+                        <p className="text-xs md:text-sm text-muted-foreground">
                           Table {item.tableNumber} • Qty: {item.quantity}
                         </p>
                       </div>
                       <Badge 
-                        className={`${getStatusColor(item.status)} text-white`}
+                        className={`${getStatusColor(item.status)} text-white text-xs md:text-sm`}
                       >
                         {getStatusIcon(item.status)}
-                        {item.status}
+                        <span className="ml-1">{item.status}</span>
                       </Badge>
                     </div>
                   </CardHeader>
                   
                   <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm">
-                        <span>Order Time:</span>
-                        <span>{item.orderTime.toLocaleTimeString()}</span>
-                      </div>
-                      
-                      <div className="flex justify-between text-sm">
-                        <span>Wait Time:</span>
-                        <span className={timeSinceOrder > 20 ? 'text-kitchen-urgent font-semibold' : ''}>
-                          {timeSinceOrder}m
-                        </span>
-                      </div>
-                      
-                      <div className="flex justify-between text-sm">
-                        <span>Est. Cook Time:</span>
-                        <span>{item.menuItem.cookingTime}m</span>
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-2 gap-2 text-xs md:text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Order:</span>
+                          <div className="font-medium">{item.orderTime.toLocaleTimeString()}</div>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Wait:</span>
+                          <div className={`font-medium ${timeSinceOrder > 20 ? 'text-kitchen-urgent' : ''}`}>
+                            {timeSinceOrder}m
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Cook:</span>
+                          <div className="font-medium">{item.menuItem.cookingTime}m</div>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Kitchen:</span>
+                          <div className="font-medium text-xs">
+                            {kitchens.find(k => k.id === item.menuItem.kitchenId)?.name}
+                          </div>
+                        </div>
                       </div>
                       
                       {item.specialInstructions && (
-                        <div className="text-sm">
+                        <div className="text-xs md:text-sm">
                           <span className="font-medium">Notes:</span>
                           <p className="text-muted-foreground">{item.specialInstructions}</p>
                         </div>
                       )}
                       
-                      <div className="flex gap-2 pt-2">
+                      <div className="pt-2">
                         {item.status === 'pending' && (
                           <Button 
                             size="sm" 
                             onClick={() => updateItemStatus(item.id, 'cooking')}
-                            className="flex-1 bg-kitchen-cooking hover:bg-kitchen-cooking/80"
+                            className="w-full bg-kitchen-cooking hover:bg-kitchen-cooking/80 text-xs md:text-sm"
                           >
                             Start Cooking
                           </Button>
@@ -280,14 +312,14 @@ const KitchenDisplay = () => {
                           <Button 
                             size="sm" 
                             onClick={() => updateItemStatus(item.id, 'ready')}
-                            className="flex-1 bg-kitchen-ready hover:bg-kitchen-ready/80"
+                            className="w-full bg-kitchen-ready hover:bg-kitchen-ready/80 text-xs md:text-sm"
                           >
                             Mark Ready
                           </Button>
                         )}
                         
                         {item.status === 'ready' && (
-                          <div className="flex-1 text-center py-2 bg-kitchen-ready/20 rounded text-sm font-medium">
+                          <div className="w-full text-center py-2 bg-kitchen-ready/20 rounded text-xs md:text-sm font-medium">
                             Ready for Pickup
                           </div>
                         )}

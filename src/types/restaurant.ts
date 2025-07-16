@@ -1,7 +1,8 @@
 export interface MenuItem {
   id: string;
   name: string;
-  section: 'grill' | 'salad' | 'beverage' | 'dessert';
+  section: 'grill' | 'salad' | 'beverage' | 'dessert' | 'appetizer' | 'main' | 'soup';
+  kitchenId: string; // Which kitchen handles this item
   cookingTime: number; // in minutes
   price: number;
 }
@@ -36,7 +37,33 @@ export interface KitchenSection {
   id: string;
   name: string;
   color: string;
+  kitchenId: string; // Which kitchen this section belongs to
   printerIP?: string;
+}
+
+export interface Kitchen {
+  id: string;
+  name: string;
+  location: string;
+  isActive: boolean;
+  sections: string[]; // Array of section IDs
+}
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  role: UserRole;
+  kitchenAccess?: string[]; // Array of kitchen IDs user has access to
+  createdAt: Date;
+  lastLogin?: Date;
+  isActive: boolean;
+}
+
+export interface AuthState {
+  user: User | null;
+  isAuthenticated: boolean;
+  loading: boolean;
 }
 
 export interface BatchCookingSuggestion {
@@ -47,7 +74,8 @@ export interface BatchCookingSuggestion {
   tableNumbers: number[];
   avgWaitTime: number;
   canBatch: boolean;
+  kitchenId: string;
 }
 
 export type OrderStatus = 'pending' | 'cooking' | 'ready' | 'served';
-export type UserRole = 'captain' | 'kitchen' | 'manager';
+export type UserRole = 'manager' | 'captain' | 'kitchen' | 'admin';

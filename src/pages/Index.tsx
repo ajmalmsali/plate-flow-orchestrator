@@ -1,10 +1,30 @@
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChefHat, Users, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, user, getUserDashboards } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const dashboards = getUserDashboards();
+      if (dashboards.length === 1) {
+        // Auto-redirect if user has only one dashboard
+        navigate(`/${dashboards[0]}`);
+      } else if (dashboards.length > 1) {
+        // Redirect to main dashboard if multiple access
+        navigate('/dashboard');
+      }
+    }
+  }, [isAuthenticated, user, navigate, getUserDashboards]);
+
+  if (isAuthenticated) {
+    return null; // Will redirect via useEffect
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
@@ -25,10 +45,10 @@ const Index = () => {
               order management, and real-time tracking solution.
             </p>
             <Button 
-              onClick={() => navigate('/dashboard')} 
+              onClick={() => navigate('/login')} 
               className="bg-primary hover:bg-primary/90 text-white px-8 py-6 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
             >
-              Access Dashboard
+              Get Started
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
           </div>
