@@ -24,7 +24,28 @@ const Login = () => {
     try {
       const success = await login(username, password);
       if (success) {
-        navigate('/dashboard');
+        // Get user from localStorage to check role
+        const storedUser = localStorage.getItem('restaurant_user');
+        if (storedUser) {
+          const user = JSON.parse(storedUser);
+          
+          // Redirect based on role - if user has only one dashboard, go directly there
+          switch (user.role) {
+            case 'captain':
+              navigate('/captain');
+              break;
+            case 'kitchen':
+              navigate('/kitchen');
+              break;
+            case 'admin':
+            case 'manager':
+            default:
+              navigate('/dashboard');
+              break;
+          }
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         setError('Invalid username or password');
       }

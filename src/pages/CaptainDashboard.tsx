@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Eye, CheckCircle, Printer, Search, Clock, Users, LogOut, Menu, X } from 'lucide-react';
+import { Plus, Eye, CheckCircle, Printer, Search, Clock, Users, LogOut, Menu, X, Grid, List, Table } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Order, OrderItem } from '@/types/restaurant';
 import { mockOrders, menuItems } from '@/data/mockData';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,6 +19,8 @@ const CaptainDashboard = () => {
   const [selectedTable, setSelectedTable] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'floor'>('list');
+  const [isNewOrderOpen, setIsNewOrderOpen] = useState(false);
   const { user, logout } = useAuth();
   const { toast } = useToast();
 
@@ -105,6 +108,74 @@ const CaptainDashboard = () => {
   };
 
   const uniqueTables = [...new Set(orders.map(order => order.tableNumber))].sort((a, b) => a - b);
+
+  const handleNewOrder = () => {
+    setIsNewOrderOpen(true);
+  };
+
+  const createNewOrder = (tableNumber: number) => {
+    const newOrder: Order = {
+      id: `order-${Date.now()}`,
+      tableNumber,
+      customerName: `Customer ${tableNumber}`,
+      items: [],
+      status: 'active',
+      orderTime: new Date(),
+      total: 0,
+      notes: ''
+    };
+    
+    setOrders(prev => [...prev, newOrder]);
+    setIsNewOrderOpen(false);
+    toast({
+      title: "New Order Created",
+      description: `Order created for Table ${tableNumber}`,
+    });
+  };
+
+  // Define table layout for floor view
+  const tableLayout = [
+    { id: 1, x: 10, y: 10, width: 60, height: 60, seats: 4 },
+    { id: 2, x: 90, y: 10, width: 60, height: 60, seats: 4 },
+    { id: 3, x: 170, y: 10, width: 60, height: 60, seats: 2 },
+    { id: 4, x: 250, y: 10, width: 60, height: 60, seats: 6 },
+    { id: 5, x: 10, y: 100, width: 60, height: 60, seats: 4 },
+    { id: 6, x: 90, y: 100, width: 60, height: 60, seats: 4 },
+    { id: 7, x: 170, y: 100, width: 60, height: 60, seats: 2 },
+    { id: 8, x: 250, y: 100, width: 60, height: 60, seats: 8 },
+    { id: 9, x: 10, y: 190, width: 60, height: 60, seats: 4 },
+    { id: 10, x: 90, y: 190, width: 60, height: 60, seats: 4 },
+    { id: 11, x: 170, y: 190, width: 60, height: 60, seats: 2 },
+    { id: 12, x: 250, y: 190, width: 60, height: 60, seats: 4 },
+    { id: 13, x: 10, y: 280, width: 60, height: 60, seats: 6 },
+    { id: 14, x: 90, y: 280, width: 60, height: 60, seats: 4 },
+    { id: 15, x: 170, y: 280, width: 60, height: 60, seats: 2 },
+  ];
+
+  const getTableStatus = (tableNumber: number) => {
+    const tableOrders = orders.filter(order => order.tableNumber === tableNumber && order.status === 'active');
+    if (tableOrders.length === 0) return 'available';
+    
+    const hasItems = tableOrders.some(order => order.items.length > 0);
+    if (!hasItems) return 'reserved';
+    
+    const allServed = tableOrders.every(order => 
+      order.items.every(item => item.status === 'served')
+    );
+    
+    if (allServed) return 'ready_to_clear';
+    return 'occupied';
+  };
+
+  const getTableStatusColor = (status: string) => {
+    switch (status) {
+      case 'available': return 'bg-green-100 border-green-300 text-green-800';
+      case 'reserved': return 'bg-yellow-100 border-yellow-300 text-yellow-800';
+      case 'occupied': return 'bg-red-100 border-red-300 text-red-800';
+      case 'ready_to_clear': return 'bg-blue-100 border-blue-300 text-blue-800';
+      default: return 'bg-gray-100 border-gray-300 text-gray-800';
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -197,15 +268,30 @@ const CaptainDashboard = () => {
               </SelectContent>
             </Select>
             
-            <Button className="bg-primary hover:bg-primary/80 px-4">
+            <Button 
+              className="bg-primary hover:bg-primary/80 px-4"
+              onClick={handleNewOrder}
+            >
               <Plus className="w-4 h-4 mr-2" />
               New Order
             </Button>
           </div>
         </div>
 
-        {/* Mobile-Optimized Orders List */}
-        <div className="space-y-4">
+        {/* View Mode Tabs */}
+        <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'list' | 'floor')} className="mb-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="list" className="flex items-center gap-2">
+              <List className="w-4 h-4" />
+              List View
+            </TabsTrigger>
+            <TabsTrigger value="floor" className="flex items-center gap-2">
+              <Grid className="w-4 h-4" />
+              Floor View
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="list" className="space-y-4 mt-4">
           {filteredOrders.map((order) => {
             const progress = getOrderProgress(order);
             const timeSinceOrder = getTimeSinceOrder(order.orderTime);
@@ -364,9 +450,100 @@ const CaptainDashboard = () => {
               </Card>
             );
           })}
-        </div>
+          </TabsContent>
+
+          <TabsContent value="floor" className="mt-4">
+            {/* Floor View */}
+            <div className="bg-card rounded-lg p-4 border">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Table className="w-5 h-5" />
+                Restaurant Floor Plan
+              </h3>
+              
+              <div className="relative bg-muted/30 rounded-lg p-4 min-h-[400px] overflow-auto">
+                <svg viewBox="0 0 340 360" className="w-full h-full min-h-[400px]">
+                  {/* Background areas */}
+                  <rect x="5" y="5" width="330" height="350" fill="transparent" stroke="#e5e7eb" strokeWidth="1" rx="8"/>
+                  
+                  {/* Tables */}
+                  {tableLayout.map((table) => {
+                    const status = getTableStatus(table.id);
+                    const hasActiveOrder = orders.some(order => 
+                      order.tableNumber === table.id && order.status === 'active'
+                    );
+                    
+                    return (
+                      <g key={table.id}>
+                        <rect
+                          x={table.x}
+                          y={table.y}
+                          width={table.width}
+                          height={table.height}
+                          rx="8"
+                          fill={status === 'available' ? '#f0fdf4' : 
+                                status === 'reserved' ? '#fefce8' :
+                                status === 'occupied' ? '#fef2f2' : '#eff6ff'}
+                          stroke={status === 'available' ? '#16a34a' : 
+                                  status === 'reserved' ? '#ca8a04' :
+                                  status === 'occupied' ? '#dc2626' : '#3b82f6'}
+                          strokeWidth="2"
+                          className="cursor-pointer hover:opacity-75 transition-opacity"
+                          onClick={() => hasActiveOrder ? null : createNewOrder(table.id)}
+                        />
+                        <text
+                          x={table.x + table.width / 2}
+                          y={table.y + table.height / 2 - 4}
+                          textAnchor="middle"
+                          className="text-xs font-bold fill-gray-800"
+                        >
+                          {table.id}
+                        </text>
+                        <text
+                          x={table.x + table.width / 2}
+                          y={table.y + table.height / 2 + 8}
+                          textAnchor="middle"
+                          className="text-xs fill-gray-600"
+                        >
+                          {table.seats} seats
+                        </text>
+                        {hasActiveOrder && (
+                          <circle
+                            cx={table.x + table.width - 8}
+                            cy={table.y + 8}
+                            r="4"
+                            fill="#dc2626"
+                            className="animate-pulse"
+                          />
+                        )}
+                      </g>
+                    );
+                  })}
+                  
+                  {/* Legend */}
+                  <g transform="translate(10, 320)">
+                    <rect x="0" y="0" width="12" height="12" fill="#f0fdf4" stroke="#16a34a" strokeWidth="1" rx="2"/>
+                    <text x="18" y="10" className="text-xs fill-gray-700">Available</text>
+                    
+                    <rect x="80" y="0" width="12" height="12" fill="#fefce8" stroke="#ca8a04" strokeWidth="1" rx="2"/>
+                    <text x="98" y="10" className="text-xs fill-gray-700">Reserved</text>
+                    
+                    <rect x="160" y="0" width="12" height="12" fill="#fef2f2" stroke="#dc2626" strokeWidth="1" rx="2"/>
+                    <text x="178" y="10" className="text-xs fill-gray-700">Occupied</text>
+                    
+                    <rect x="240" y="0" width="12" height="12" fill="#eff6ff" stroke="#3b82f6" strokeWidth="1" rx="2"/>
+                    <text x="258" y="10" className="text-xs fill-gray-700">Ready to Clear</text>
+                  </g>
+                </svg>
+              </div>
+              
+              <p className="text-sm text-muted-foreground mt-2 text-center">
+                Click on available tables to create new orders
+              </p>
+            </div>
+          </TabsContent>
+        </Tabs>
         
-        {filteredOrders.length === 0 && (
+        {viewMode === 'list' && filteredOrders.length === 0 && (
           <div className="text-center py-12">
             <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-xl font-semibold text-muted-foreground">No active orders</h3>
@@ -374,6 +551,41 @@ const CaptainDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* New Order Dialog */}
+      <Dialog open={isNewOrderOpen} onOpenChange={setIsNewOrderOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Order</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Select a table to create a new order:
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {tableLayout.map((table) => {
+                const status = getTableStatus(table.id);
+                const isAvailable = status === 'available';
+                return (
+                  <Button
+                    key={table.id}
+                    variant={isAvailable ? "default" : "secondary"}
+                    size="sm"
+                    onClick={() => createNewOrder(table.id)}
+                    disabled={!isAvailable}
+                    className={`${isAvailable ? 'bg-primary hover:bg-primary/80' : ''}`}
+                  >
+                    Table {table.id}
+                    {!isAvailable && (
+                      <span className="ml-1 text-xs">({status})</span>
+                    )}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
