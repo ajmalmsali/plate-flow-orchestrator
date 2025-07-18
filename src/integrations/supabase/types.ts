@@ -14,7 +14,211 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      kitchen_sections: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          kitchen_id: string
+          name: string
+          printer_ip: string | null
+          updated_at: string
+        }
+        Insert: {
+          color: string
+          created_at?: string
+          id?: string
+          kitchen_id: string
+          name: string
+          printer_ip?: string | null
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          kitchen_id?: string
+          name?: string
+          printer_ip?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kitchen_sections_kitchen_id_fkey"
+            columns: ["kitchen_id"]
+            isOneToOne: false
+            referencedRelation: "kitchens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kitchens: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          location: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          location: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          location?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      menu_items: {
+        Row: {
+          cooking_time: number
+          created_at: string
+          id: string
+          is_active: boolean
+          kitchen_id: string
+          name: string
+          price: number
+          section: Database["public"]["Enums"]["menu_section"]
+          updated_at: string
+        }
+        Insert: {
+          cooking_time: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          kitchen_id: string
+          name: string
+          price: number
+          section: Database["public"]["Enums"]["menu_section"]
+          updated_at?: string
+        }
+        Update: {
+          cooking_time?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          kitchen_id?: string
+          name?: string
+          price?: number
+          section?: Database["public"]["Enums"]["menu_section"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_items_kitchen_id_fkey"
+            columns: ["kitchen_id"]
+            isOneToOne: false
+            referencedRelation: "kitchens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_items: {
+        Row: {
+          cooking_start_time: string | null
+          created_at: string
+          id: string
+          menu_item_id: string
+          order_id: string
+          priority: number
+          quantity: number
+          ready_time: string | null
+          served_time: string | null
+          special_instructions: string | null
+          status: Database["public"]["Enums"]["order_item_status"]
+          updated_at: string
+        }
+        Insert: {
+          cooking_start_time?: string | null
+          created_at?: string
+          id?: string
+          menu_item_id: string
+          order_id: string
+          priority?: number
+          quantity?: number
+          ready_time?: string | null
+          served_time?: string | null
+          special_instructions?: string | null
+          status?: Database["public"]["Enums"]["order_item_status"]
+          updated_at?: string
+        }
+        Update: {
+          cooking_start_time?: string | null
+          created_at?: string
+          id?: string
+          menu_item_id?: string
+          order_id?: string
+          priority?: number
+          quantity?: number
+          ready_time?: string | null
+          served_time?: string | null
+          special_instructions?: string | null
+          status?: Database["public"]["Enums"]["order_item_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          created_at: string
+          customer_name: string | null
+          id: string
+          notes: string | null
+          order_time: string
+          status: Database["public"]["Enums"]["order_status"]
+          table_number: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_name?: string | null
+          id?: string
+          notes?: string | null
+          order_time?: string
+          status?: Database["public"]["Enums"]["order_status"]
+          table_number: number
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string | null
+          id?: string
+          notes?: string | null
+          order_time?: string
+          status?: Database["public"]["Enums"]["order_status"]
+          table_number?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +227,17 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      menu_section:
+        | "grill"
+        | "salad"
+        | "beverage"
+        | "dessert"
+        | "appetizer"
+        | "main"
+        | "soup"
+      order_item_status: "pending" | "cooking" | "ready" | "served"
+      order_status: "active" | "completed" | "cancelled"
+      user_role: "manager" | "captain" | "kitchen" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +364,19 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      menu_section: [
+        "grill",
+        "salad",
+        "beverage",
+        "dessert",
+        "appetizer",
+        "main",
+        "soup",
+      ],
+      order_item_status: ["pending", "cooking", "ready", "served"],
+      order_status: ["active", "completed", "cancelled"],
+      user_role: ["manager", "captain", "kitchen", "admin"],
+    },
   },
 } as const

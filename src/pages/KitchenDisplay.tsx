@@ -4,31 +4,31 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { OrderItem, BatchCookingSuggestion } from '@/types/restaurant';
-import { mockOrders, kitchenSections, menuItems, kitchens } from '@/data/mockData';
-import { useToast } from '@/hooks/use-toast';
+import { BatchCookingSuggestion } from '@/types/restaurant';
+import { useOrders } from '@/hooks/useOrders';
 
 const KitchenDisplay = () => {
   const [selectedSection, setSelectedSection] = useState<string>('all');
   const [selectedKitchen, setSelectedKitchen] = useState<string>('all');
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [batchSuggestions, setBatchSuggestions] = useState<BatchCookingSuggestion[]>([]);
-  const { toast } = useToast();
+  
+  const { 
+    orderItems, 
+    kitchens, 
+    kitchenSections, 
+    loading, 
+    error, 
+    updateItemStatus, 
+    startBatchCooking 
+  } = useOrders();
 
   useEffect(() => {
-    // Simulate real-time updates
-    const interval = setInterval(() => {
-      const allItems = mockOrders.flatMap(order => order.items);
-      setOrderItems(allItems);
-      generateBatchSuggestions(allItems);
-    }, 1000);
+    generateBatchSuggestions(orderItems);
+  }, [orderItems]);
 
-    return () => clearInterval(interval);
-  }, []);
-
-  const generateBatchSuggestions = (items: OrderItem[]) => {
+  const generateBatchSuggestions = (items: any[]) => {
     const pendingItems = items.filter(item => item.status === 'pending');
-    const itemGroups = new Map<string, OrderItem[]>();
+    const itemGroups = new Map<string, any[]>();
     
     pendingItems.forEach(item => {
       const key = item.menuItemId;
@@ -51,7 +51,7 @@ const KitchenDisplay = () => {
           orderIds: items.map(item => item.id),
           tableNumbers: [...new Set(items.map(item => item.tableNumber))],
           avgWaitTime,
-          canBatch: totalQuantity <= 6, // Reasonable batch size
+          canBatch: totalQuantity <= 6,
           kitchenId: items[0].menuItem.kitchenId,
         });
       }
@@ -68,43 +68,44 @@ const KitchenDisplay = () => {
 
   const availableSections = selectedKitchen === 'all' 
     ? kitchenSections 
-    : kitchenSections.filter(section => section.kitchenId === selectedKitchen);
+    : kitchenSections.filter(section => section.kitchen_id === selectedKitchen);
 
-  const updateItemStatus = (itemId: string, newStatus: 'pending' | 'cooking' | 'ready' | 'served') => {
-    setOrderItems(prev => 
-      prev.map(item => 
-        item.id === itemId 
-          ? { 
-              ...item, 
-              status: newStatus,
-              cookingStartTime: newStatus === 'cooking' ? new Date() : item.cookingStartTime,
-              readyTime: newStatus === 'ready' ? new Date() : item.readyTime,
-            }
-          : item
-      )
-    );
-    
-    toast({
-      title: "Status Updated",
-      description: `Item marked as ${newStatus}`,
-    });
+  const handleUpdateStatus = async (itemId: string, newStatus: 'pending' | 'cooking' | 'ready' | 'served') => {
+    const result = await updateItemStatus(itemId, newStatus);
+    if (!result.success) {
+      console.error('Failed to update status:', result.error);
+    }
   };
 
-  const startBatchCooking = (suggestion: BatchCookingSuggestion) => {
-    const itemsToUpdate = suggestion.orderIds;
-    setOrderItems(prev => 
-      prev.map(item => 
-        itemsToUpdate.includes(item.id)
-          ? { ...item, status: 'cooking' as const, cookingStartTime: new Date() }
-          : item
-      )
-    );
-    
-    toast({
-      title: "Batch Cooking Started",
-      description: `Started cooking ${suggestion.totalQuantity}x ${suggestion.menuItem.name}`,
-    });
+  const handleStartBatchCooking = async (suggestion: BatchCookingSuggestion) => {
+    const result = await startBatchCooking(suggestion);
+    if (!result.success) {
+      console.error('Failed to start batch cooking:', result.error);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <ChefHat className="w-12 h-12 mx-auto text-muted-foreground mb-4 animate-pulse" />
+          <p className="text-muted-foreground">Loading kitchen display...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="w-12 h-12 mx-auto text-destructive mb-4" />
+          <p className="text-destructive mb-2">Error loading kitchen data</p>
+          <p className="text-muted-foreground text-sm">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -218,7 +219,7 @@ const KitchenDisplay = () => {
                       </span>
                       <Button 
                         size="sm" 
-                        onClick={() => startBatchCooking(suggestion)}
+                        onClick={() => handleStartBatchCooking(suggestion)}
                         className="bg-kitchen-cooking hover:bg-kitchen-cooking/80 text-xs md:text-sm"
                       >
                         Start Batch
@@ -301,7 +302,7 @@ const KitchenDisplay = () => {
                         {item.status === 'pending' && (
                           <Button 
                             size="sm" 
-                            onClick={() => updateItemStatus(item.id, 'cooking')}
+                            onClick={() => handleUpdateStatus(item.id, 'cooking')}
                             className="w-full bg-kitchen-cooking hover:bg-kitchen-cooking/80 text-xs md:text-sm"
                           >
                             Start Cooking
@@ -311,7 +312,7 @@ const KitchenDisplay = () => {
                         {item.status === 'cooking' && (
                           <Button 
                             size="sm" 
-                            onClick={() => updateItemStatus(item.id, 'ready')}
+                            onClick={() => handleUpdateStatus(item.id, 'ready')}
                             className="w-full bg-kitchen-ready hover:bg-kitchen-ready/80 text-xs md:text-sm"
                           >
                             Mark Ready
